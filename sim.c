@@ -224,11 +224,11 @@ void PrintCacheContents( TLinkedListNode *headPtr) {
 
 #ifdef DEBUG_AVAILABLE
        printf("\n");
-        printf( "===== %s contents =====\n",cursorPtr->cacheLevelPtr->name);
+        printf( "===== %s contents =====",cursorPtr->cacheLevelPtr->name);
 #endif
 #ifdef GENERATE_FILE
        printf("\n");
-        fprintf(file,"===== %s contents =====\n",cursorPtr->cacheLevelPtr->name);
+        fprintf(file,"===== %s contents =====",cursorPtr->cacheLevelPtr->name);
 #endif
 
 
