@@ -224,6 +224,7 @@ void PrintCacheContents( TLinkedListNode *headPtr) {
         // Print the Contents of the respective Cache
 #ifdef DEBUG_AVAILABLE
         printf( "===== %s contents =====\n",cursorPtr->cacheLevelPtr->name);
+        printf( "\n");
 #endif
 #ifdef GENERATE_FILE
         fprintf(file, "\n");
