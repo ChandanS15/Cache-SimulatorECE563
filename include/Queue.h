@@ -10,6 +10,7 @@
 typedef struct _queue_tag
 {
     bool validBit;
+    uint16_t lruIndex;
     uint32_t head;              ///< Queue's head index (next write position)
     uint32_t tail;              ///< Queue's tail index (next read position)
     uint32_t count;             ///< Queue's count - the number of items in the queue
@@ -24,7 +25,7 @@ typedef struct _queue_tag
 // Note          - 
 // Return        - 
 //------------------------------------------------------------------------------------------------------------------
-bool QueueInit(TQueueRecord* queuePtr, uint32_t itemSize, uint32_t queueSize);
+bool QueueInit(TQueueRecord* queuePtr, uint32_t itemSize, uint32_t queueSize, uint16_t prefetchStreamIndex);
 
 //*************************************************************************************************************** */
 //------------------------------------------------------------------------------------------------------------------

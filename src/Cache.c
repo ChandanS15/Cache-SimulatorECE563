@@ -114,7 +114,6 @@ void CacheDeallocateMemory(TLinkedListNode *headPtr) {
 // Return        -
 //------------------------------------------------------------------------------------------------------------------
 void CacheAllocateMemory(TLinkedListNode *headPtr) {
-
     TLinkedListNode *cursorPtr;
     bool queueInitReturnStatus = false;
 
@@ -184,33 +183,34 @@ void CacheAllocateMemory(TLinkedListNode *headPtr) {
                 tempPrefetchDS.tag =0;
                 for(uint16_t prefetchStreamIndex = 0; prefetchStreamIndex < cursorPtr->cacheLevelPtr->numOfStreams; prefetchStreamIndex++ ) {
                     // Initialising each queue and the number of queues depends on the prefetch streams required.
-                    queueInitReturnStatus = QueueInit(&cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex] , sizeof(struct _prefetchTag), cursorPtr->cacheLevelPtr->numOfBlocksPerStream);
+                    queueInitReturnStatus = QueueInit(&cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex] , sizeof(struct _prefetchTag), cursorPtr->cacheLevelPtr->numOfBlocksPerStream, prefetchStreamIndex);
                     if(!queueInitReturnStatus) {
                         printf("Memory Allocation of queue failed.\n");
                         exit(0);
-                    } else {
-                        for(uint16_t prefetchBlockindex =0; prefetchBlockindex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; prefetchBlockindex++) {
-                            tempPrefetchDS.data= prefetchBlockindex + 1;
-                            tempPrefetchDS.tag = prefetchBlockindex + 1;
-                            bool queueAppend = QueueAppend(&cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex], (uint8_t*)&tempPrefetchDS);
-                            if(queueAppend == false) {
-                                printf("Memory Allocation of queue %d Stream, %d block failed.\n",prefetchStreamIndex, prefetchBlockindex);
-                            }
-                        }
-                    }
+                        // } else {
+                        //     for(uint16_t prefetchBlockindex =0; prefetchBlockindex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; prefetchBlockindex++) {
+                        //         tempPrefetchDS.data= prefetchBlockindex + 1;
+                        //         tempPrefetchDS.tag = prefetchBlockindex + 1;
+                        //         bool queueAppend = QueueAppend(&cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex], (uint8_t*)&tempPrefetchDS);
+                        //         if(queueAppend == false) {
+                        //             printf("Memory Allocation of queue %d Stream, %d block failed.\n",prefetchStreamIndex, prefetchBlockindex);
+                        //         }
+                        //     }
+                        // }
 #ifdef DEBUG_AVAILABLE
                     else {
                         printf("Memory allocation of %s Prefetch Streams and Buffer was Successful\n",cursorPtr->cacheLevelPtr->name);
                     }
 #endif
+                    }
                 }
-            }
 #ifdef DEBUG_AVAILABLE
-        printf("Memory Allocation of Cache %s is successful.\n", cursorPtr->cacheLevelPtr->name);
+                printf("Memory Allocation of Cache %s is successful.\n", cursorPtr->cacheLevelPtr->name);
 #endif
 
+            }
+            cursorPtr = cursorPtr->nextPtr;
         }
-        cursorPtr = cursorPtr->nextPtr;
-    }
 
+    }
 }

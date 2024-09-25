@@ -38,8 +38,10 @@ struct _prefetchStream {
 
 
 
-TprefetchDS *SearchTagInPrefetch(TLinkedListNode *headPtr, uint32_t index, uint32_t tag, bool *prefetchTagSearchStatus, uint32_t *retrievedPrefetchIndex);
+TprefetchDS *SearchTagInPrefetch(TLinkedListNode *headPtr, uint32_t tag, bool *prefetchTagSearchStatus, uint32_t *retrievedPrefetchIndex, uint32_t *retrievedPrefetchStream);
 
 void PrefetchTagLoad(TLinkedListNode *headPtr);
+void FillPrefetchBuffer(TLinkedListNode *headPtr, uint32_t index, uint32_t tag);
+uint32_t FindLRUPrefetch(TLinkedListNode *headPtr);
 
 #endif

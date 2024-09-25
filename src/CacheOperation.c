@@ -13,6 +13,8 @@
 #include "../include/CacheOperation.h"
 
 
+
+
 //------------------------------------------------------------------------------------------------------------------
 // Local function prototypes.
 void ExtractAddress(TCacheDS *cacheDSPtr, uint32_t memAddress, uint32_t *tag, uint32_t *index, uint32_t *blockOffset);
@@ -30,9 +32,9 @@ bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *load
     // CursorPtr pointing to the head of LL.
     TLinkedListNode *cursorPtr = headPtr;
     // Variables to point to respective Indexes used later.
-    uint16_t tagFoundIndex = 0;  uint16_t lRUIndex = 0;
+    uint16_t tagFoundIndex = 0;  uint16_t lRUIndex = 0; uint16_t tagFoundInPrefetchIndex = 0; uint16_t tagFoundInPrefetchStream = 0;
     bool isCacheSetFull = false;
-
+    TCacheSearchStatus tagFoundInPrefetchStatus = eNone;
     // Default searchStatus is Miss.
     TCacheSearchStatus searchStatus = eNone;
 
@@ -41,20 +43,34 @@ bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *load
 
     // Search if the memAddress is currently present in the cache
     // and return the status and the tag where the block is found.
-    searchStatus = SearchTag(cursorPtr, memAddress, &tagFoundIndex);
-
     cursorPtr->cacheLevelPtr->cacheStatistics.readCount += 1;
+    searchStatus = SearchTag(cursorPtr, memAddress, &tagFoundIndex, &tagFoundInPrefetchStatus, &tagFoundInPrefetchIndex, &tagFoundInPrefetchStream);
+
+    if(tagFoundInPrefetchStatus == eCacheHitInPrefetch) {
+         searchStatus = eCacheHit;
+         cursorPtr->cacheLevelPtr->prefetchStatistics.hitCount += 1;
+     }
+    else if (tagFoundInPrefetchStatus == eCacheMissInPrefetch) {
+        searchStatus = eCacheMiss;
+        cursorPtr->cacheLevelPtr->prefetchStatistics.missCount += 1;
+    }
+
+
 
     if(searchStatus == eCacheHit) {
         // Because cache is hit Just update the LRU counter wrt to the tagFoundIndex
         UpdateLRUCounters(cursorPtr, index, tagFoundIndex);
         cursorPtr->cacheLevelPtr->cacheStatistics.hitCount += 1;
+
     }
     else if (searchStatus == eCacheMiss) {
+
+        // This handles a single level of memory.
 
         if(cursorPtr->nextPtr == NULL) {
             cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
         }
+
         // If we face cache miss follow this flow.
         cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount += 1;
         uint32_t emptyTagIndex = 0;
@@ -135,18 +151,19 @@ bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t data
     // CursorPtr pointing to the head of LL.
     TLinkedListNode *cursorPtr = headPtr; uint16_t lRUIndex = 0;
     // Variables to point to respective Indexes used later.
-    uint16_t tagFoundIndex = 0;  uint16_t victimTagIndex = 0;
+    uint16_t tagFoundIndex = 0;  uint16_t victimTagIndex = 0; uint16_t tagFoundInPrefetchIndex = 0; uint16_t tagFoundInPrefetchStream = 0;
 
     // Default searchStatus is Miss.
     TCacheSearchStatus searchStatus = eNone;
     bool isCacheSetFull = false;
+    TCacheSearchStatus tagFoundInPrefetchStatus = eNone;
 
     // Extract BlockOffset value from a given memory address.
     ExtractAddress(cursorPtr->cacheLevelPtr, memAddress, &tag, &index, &blockOffset);
 
     // Search if the memAddress is currently present in the cache
     // and return the status and the tag where the block is found.
-    searchStatus = SearchTag(cursorPtr, memAddress, &tagFoundIndex);
+    searchStatus = SearchTag(cursorPtr, memAddress, &tagFoundIndex, &tagFoundInPrefetchStatus, &tagFoundInPrefetchIndex, &tagFoundInPrefetchStream);
 
     cursorPtr->cacheLevelPtr->cacheStatistics.writeCount += 1;
 
@@ -228,10 +245,11 @@ bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t data
 // Note          -
 // Return        -
 //------------------------------------------------------------------------------------------------------------------
-TCacheSearchStatus SearchTag(TLinkedListNode *headPtr, uint32_t memAddress, uint16_t *tagFoundIndex) {
+TCacheSearchStatus SearchTag(TLinkedListNode *headPtr, uint32_t memAddress, uint16_t *tagFoundIndex,
+                            TCacheSearchStatus *tagFoundInPrefetchStatus, uint16_t *tagFoundInPrefetchIndex, uint16_t *tagFoundInPrefetchStream) {
 
-    TLinkedListNode * cursorPtr; TCacheSearchStatus currenSearchStatus = eNone;  uint32_t index = 0; uint32_t tag = 0;
-    uint32_t blockOffset = 0;  cursorPtr = headPtr;
+    TLinkedListNode * cursorPtr; TCacheSearchStatus currentSearchStatus = eNone;  uint32_t index = 0; uint32_t tag = 0;
+    uint32_t blockOffset = 0;  cursorPtr = headPtr; *tagFoundInPrefetchIndex = 0; *tagFoundInPrefetchStream = 0;
 if(cursorPtr != NULL) {
     // Extract BlockOffset value for given memory address.
     ExtractAddress(cursorPtr->cacheLevelPtr, memAddress, &tag, &index, &blockOffset);
@@ -249,17 +267,40 @@ if(cursorPtr != NULL) {
             *tagFoundIndex = searchTagIndex;
 
             // Current status is cache hit.
-            currenSearchStatus = eCacheHit;
+            currentSearchStatus = eCacheHit;
             break;
             }
         else{
 
             // This is currently a demand miss as we are yet to search the prefetch buffer.
-            currenSearchStatus = eCacheMiss;
+            currentSearchStatus = eCacheMiss;
         }
     }
+
+    if(cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent) {
+        cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount += 1;
+        // When encountered with Cache Miss search in the prefetchBuffer
+        TprefetchDS *retrievedPrefetchTag;
+        bool prefetchTagSearchStatus;
+        uint32_t retrievedPrefetchIndex;
+        uint32_t retrievedPrefetchStream;
+
+        retrievedPrefetchTag = SearchTagInPrefetch(cursorPtr, tag, &prefetchTagSearchStatus, &retrievedPrefetchIndex, &retrievedPrefetchStream);
+
+        if(prefetchTagSearchStatus == false) {
+            cursorPtr->cacheLevelPtr->prefetchStatistics.missCount += 1;
+            FillPrefetchBuffer(cursorPtr,index,  tag);
+            *tagFoundInPrefetchStatus = eCacheMissInPrefetch;
+            //currentSearchStatus = eCacheMiss;
+        } else {
+            *tagFoundInPrefetchIndex = retrievedPrefetchIndex;
+            *tagFoundInPrefetchStatus = eCacheHitInPrefetch;
+            //currentSearchStatus = eCacheHit;
+        }
+    }
+
 }
-    return currenSearchStatus;
+    return currentSearchStatus;
 }
 
 //*************************************************************************************************************** */
@@ -272,9 +313,9 @@ uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress) {
     TLinkedListNode *cursorPtr = headPtr->nextPtr; TCacheSearchStatus searchStatus = eNone;
     // Variables to point to respective Indexes used later.
     uint16_t tagFoundIndex = 0;  uint32_t index = 0;  uint32_t tag = 0;  uint32_t blockOffset = 0;
-    uint16_t lRUIndex = 0; uint32_t requestedBlock;
+    uint16_t lRUIndex = 0; uint32_t requestedBlock;uint16_t tagFoundInPrefetchIndex = 0; uint16_t tagFoundInPrefetchStream = 0;
     bool isCacheSetFull = false;
-
+    TCacheSearchStatus tagFoundInPrefetchStatus = false;
 
     while (cursorPtr != NULL) {
         cursorPtr->cacheLevelPtr->cacheStatistics.readCount += 1;
@@ -284,7 +325,7 @@ uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress) {
         // Extract BlockOffset value from a given memory address.
         ExtractAddress(cursorPtr->cacheLevelPtr, memAddress, &tag, &index, &blockOffset);
 
-        searchStatus = SearchTag(cursorPtr, memAddress, &tagFoundIndex);
+        searchStatus = SearchTag(cursorPtr, memAddress, &tagFoundIndex ,&tagFoundInPrefetchStatus, &tagFoundInPrefetchIndex, &tagFoundInPrefetchStream);
         // return the tags from the next level.
         if(searchStatus == eCacheHit) {
 
@@ -444,15 +485,15 @@ void UpdateLRUCounters(TLinkedListNode *headPtr, uint32_t index, uint32_t tagFou
 void WriteBack(TLinkedListNode *headPtr, uint32_t memAddress) {
     TLinkedListNode *cursorPtr = headPtr->nextPtr;
     // Data and memAddress to be stored.
-    uint32_t index = 0;  uint32_t tag = 0;  uint32_t blockOffset = 0; uint16_t tagFoundIndex = 0;
+    uint32_t index = 0;  uint32_t tag = 0;  uint32_t blockOffset = 0; uint16_t tagFoundIndex = 0; uint16_t tagFoundInPrefetchIndex = 0; uint16_t tagFoundInPrefetchStream = 0;
     // Default searchStatus is Miss.
     TCacheSearchStatus searchStatus = eNone;
-
+    TCacheSearchStatus tagFoundInPrefetchStatus = eNone;
     bool isCacheSetFull = false; uint32_t lRUIndex = 0; uint32_t emptyTagIndex = 0;
 
     if(cursorPtr != NULL) {
         cursorPtr->cacheLevelPtr->cacheStatistics.writeCount += 1;
-        searchStatus = SearchTag(cursorPtr, memAddress, &tagFoundIndex);
+        searchStatus = SearchTag(cursorPtr, memAddress, &tagFoundIndex ,&tagFoundInPrefetchStatus, &tagFoundInPrefetchIndex, &tagFoundInPrefetchStream);
 
         ExtractAddress(cursorPtr->cacheLevelPtr, memAddress, &tag, &index, &blockOffset);
         if(searchStatus == eCacheHit) {

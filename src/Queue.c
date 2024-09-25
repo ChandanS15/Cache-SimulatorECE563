@@ -11,7 +11,7 @@
 // Return        -
 //------------------------------------------------------------------------------------------------------------------
 
-bool QueueInit(TQueueRecord* queuePtr, uint32_t itemSize, uint32_t queueSize)
+bool QueueInit(TQueueRecord* queuePtr, uint32_t itemSize, uint32_t queueSize, uint16_t prefetchStreamIndex)
 {
     bool returnStatus;
     //Check for NULL pointers
@@ -30,6 +30,7 @@ bool QueueInit(TQueueRecord* queuePtr, uint32_t itemSize, uint32_t queueSize)
         queuePtr->tail = 0u;
         queuePtr->count = 0u;
         queuePtr->validBit = false;
+        queuePtr->lruIndex = prefetchStreamIndex;
 
         returnStatus = true;
     }
@@ -87,12 +88,12 @@ bool QueueAppend(TQueueRecord* queuePtr, uint8_t *itemPtr)
     {
         //Check if queue is full
         queueFull = QueueIsFull(queuePtr);
-        if(queueFull == true)
-        {
-            returnStatus = false;
-        }
-        else if(queueFull == false)
-        {
+        // if(queueFull == true)
+        // {
+        //     returnStatus = false;
+        // }
+        // else if(queueFull == false)
+        // {
             //Append the item onto the queue
             memcpy((void*)&(queuePtr->dataPtr[queuePtr->head]), (void*)itemPtr, queuePtr->itemSize);
 
@@ -101,16 +102,16 @@ bool QueueAppend(TQueueRecord* queuePtr, uint8_t *itemPtr)
             //Increment head index i.e items in the queue
             queuePtr->head++;
             //Wrap head index if head is equal to size
-            /*if(queuePtr->head == queuePtr->size)
+            if(queuePtr->head == queuePtr->size)
             {
                 queuePtr->head = 0;
-            }*/
+            }
 
             //Increment count
             queuePtr->count++;
             returnStatus = true;
         }
-    }
+    //}
 
     return returnStatus;
 

@@ -21,7 +21,7 @@ all: clean sim
 # rule for making sim
 
 sim: $(SIM_OBJ)
-	$(CC) -o sim $(CFLAGS) $(SIM_OBJ) src/Cache.c  src/Queue.c src/CacheOperation.c -lm
+	$(CC) -o sim $(CFLAGS) $(SIM_OBJ) src/Cache.c  src/Queue.c src/CacheOperation.c src/Prefetch.c -lm
 	@echo "-----------DONE WITH sim-----------"
 
 

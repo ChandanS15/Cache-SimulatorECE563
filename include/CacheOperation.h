@@ -27,7 +27,8 @@ typedef enum _searchStatus {
 
     eCacheHit = 0x01,
     eCacheMiss = 0x02,
-    eCacheMissAndReplace = 0x03,
+    eCacheHitInPrefetch = 0x04,
+    eCacheMissInPrefetch = 0x08,
     eNone = 0xFF
 }TCacheSearchStatus;
 
@@ -60,7 +61,8 @@ bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t data
 
 bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *loadedData) ;
 
-TCacheSearchStatus SearchTag(TLinkedListNode *headPtr, uint32_t memAddress, uint16_t *tagFoundIndex) ;
+TCacheSearchStatus SearchTag(TLinkedListNode *headPtr, uint32_t memAddress, uint16_t *tagFoundIndex,
+                            TCacheSearchStatus *tagFoundInPrefetchStatus, uint16_t *tagFoundInPrefetchIndex, uint16_t *tagFoundInPrefetchStream)  ;
 
 uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress);//, TCacheRequestType cacheOperation);
 

@@ -69,6 +69,7 @@ typedef struct _prefetchStats{
     uint32_t readCount;
     uint32_t missCount;
     uint32_t prefetchCount;
+    uint32_t hitCount;
 
 }TprefetchStats;
 
