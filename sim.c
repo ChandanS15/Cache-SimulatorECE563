@@ -65,7 +65,6 @@ int main (int argc, char *argv[]) {
    printf("PREF_N:     %u\n", params.PREF_N);
    printf("PREF_M:     %u\n", params.PREF_M);
    printf("trace_file: %s\n", trace_file);
-
    // Initialise cache Data store which has attributes of cache to be designed.
    if(params.L2_SIZE == 0) {
 
@@ -221,14 +220,13 @@ void PrintCacheContents( TLinkedListNode *headPtr) {
     while ( cursorPtr != NULL ) {
 
 
-
+        // Print the Contents of the respective Cache
 #ifdef DEBUG_AVAILABLE
-       printf("\n");
-        printf( "===== %s contents =====",cursorPtr->cacheLevelPtr->name);
+        printf( "===== %s contents =====\n",cursorPtr->cacheLevelPtr->name);
 #endif
 #ifdef GENERATE_FILE
-       printf("\n");
-        fprintf(file,"===== %s contents =====",cursorPtr->cacheLevelPtr->name);
+        fprintf(file, "\n");
+        fprintf(file,"===== %s contents =====\n",cursorPtr->cacheLevelPtr->name);
 #endif
 
 

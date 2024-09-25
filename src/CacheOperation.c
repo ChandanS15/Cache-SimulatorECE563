@@ -79,7 +79,10 @@ bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *load
                 }
                 ExtractAddress(cursorPtr->cacheLevelPtr, requestedAddress, &reqTag, &reqIndex, &reqBlockOffset);
                 cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
-                cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
+                if(cursorPtr->nextPtr == NULL) {
+                    cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
+                }
+
                 cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = reqTag;
                 cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = false;
 
@@ -294,6 +297,7 @@ uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress) {
             // If the block to be returned is not in this level
             // install here and search for ir in the next level.
             cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount += 1;
+            cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
             cursorPtr->cacheLevelPtr->cacheStatistics.missCount += 1;
 
             uint32_t emptyTagIndex = 0;
@@ -306,7 +310,6 @@ uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress) {
                     lRUIndex = FindLRUBlockIndex(cursorPtr, index);
                     if(cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty == true) {
                         // Writeback because the dirty bit is set.
-
 
                         // Perform these operations with multiple levels of heirarchy.
                         if(cursorPtr->nextPtr != NULL) {
@@ -329,7 +332,6 @@ uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress) {
 
                     } else {
 
-                        cursorPtr->cacheLevelPtr->totalMemoryTraffic += 2;
                         cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = tag;
                         UpdateLRUCounters(cursorPtr, index, lRUIndex);
                         RetrieveAddress(cursorPtr->cacheLevelPtr, index, cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag, &requestedBlock);
@@ -462,26 +464,26 @@ void WriteBack(TLinkedListNode *headPtr, uint32_t memAddress) {
             UpdateLRUCounters(cursorPtr, index, tagFoundIndex);
         }
         else if (searchStatus == eCacheMiss) {
-            cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
+
             lRUIndex = FindLRUBlockIndex(cursorPtr, index);
             isCacheSetFull = IsCacheSetFull(cursorPtr, index, &emptyTagIndex);
             if(cursorPtr != NULL ) {
                 if(isCacheSetFull == true) {
+                    if (cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty == true) {
+                        cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
+                        cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
+                        if(cursorPtr->nextPtr != NULL)
+                            WriteBack(cursorPtr, memAddress);
+                    }
                     cursorPtr->cacheLevelPtr->cacheStatistics.writeMissCount += 1;
+                    cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = tag;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].valid   = true;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
                     UpdateLRUCounters(cursorPtr, index, lRUIndex);
-                    cursorPtr->cacheLevelPtr->totalMemoryTraffic += 2;
+                    //cursorPtr->cacheLevelPtr->totalMemoryTraffic += 2;
 
                 } else if(isCacheSetFull == false) {
-
-                    if (cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty == true) {
-                        cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
-                        cursorPtr->cacheLevelPtr->totalMemoryTraffic += 2;
-                        WriteBack(cursorPtr, memAddress);
-                    }
-
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[emptyTagIndex].tag = tag;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[emptyTagIndex].valid   = true;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[emptyTagIndex].dirty = true;
