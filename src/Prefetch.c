@@ -80,6 +80,8 @@ void FillPrefetchBuffer(TLinkedListNode *headPtr, uint32_t index, uint32_t tag) 
         for(prefetchIndex = 0; prefetchIndex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; prefetchIndex++) {
 
             QueueRead(&cursorPtr->cacheLevelPtr->prefetchQueue[lruPrefetchStreamIndex], (uint8_t*)&prefetchDataRemoved);
+            cursorPtr->cacheLevelPtr->prefetchQueue[lruPrefetchStreamIndex].head = 0;
+
         }
         for(prefetchIndex = 0; prefetchIndex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; prefetchIndex++) {
 

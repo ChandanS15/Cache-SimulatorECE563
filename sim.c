@@ -126,17 +126,46 @@ int main (int argc, char *argv[]) {
 
    while (fscanf(fp, "%c %x\n", &rw, &addr) == 2) {	// Stay in the loop if fscanf() successfully parsed two tokens as specified.
       count++;
-      if(count == 89) {
+      if(count == 99669) {
+         count++;
+         count--;
+      }
+      if(count == 99915) {
          count++;
          count--;
       }
 
-      if(count == 248) {
+      if(count == 99931) {
          count++;
          count--;
       }
 
-      if(count == 91427) {
+      if(count == 99939) {
+         count++;
+         count--;
+      }
+
+      if(count == 99947) {
+         count++;
+         count--;
+      }
+
+      if(count == 99955) {
+         count++;
+         count--;
+      }
+
+      if(count == 99963) {
+         count++;
+         count--;
+      }
+
+      if(count == 99979) {
+         count++;
+         count--;
+      }
+
+      if(count == 999995) {
          count++;
          count--;
       }

@@ -309,13 +309,18 @@ bool QueuePeekByIndex(TQueueRecord* queuePtr, uint16_t *itemPtr, uint16_t peekIn
         }
         else
         {
-            queueOffset = queuePtr->tail + peekIndex;
+            queueOffset = peekIndex;
             if(peekIndex < queuePtr->count ) {
 
                 //Move the queue entry onto the required memory location
                 memcpy((void*)itemPtr, (void*)(&queuePtr->dataPtr[queueOffset]), queuePtr->itemSize);
 
                 returnStatus = true;
+            }else if(peekIndex == 0 ) {
+                memcpy((void*)itemPtr, (void*)(&queuePtr->dataPtr[queueOffset]), queuePtr->itemSize);
+
+                returnStatus = true;
+
             }
             else if(peekIndex > queuePtr->count ) {
                queuePtr->dataPtr[queueOffset].data = 0;
@@ -336,7 +341,7 @@ bool QueuePeekByIndex(TQueueRecord* queuePtr, uint16_t *itemPtr, uint16_t peekIn
 //------------------------------------------------------------------------------------------------------------------
 bool QueueRemoveUntilIndex(TQueueRecord* queuePtr, uint32_t index)
 {
-    TprefetchDS * itemPtr;
+    TprefetchDS * itemPtr = (TprefetchDS*)malloc(sizeof(TprefetchDS));
 
     if (queuePtr == NULL || index >= queuePtr->count)
     {
@@ -370,11 +375,19 @@ bool QueueRemoveUntilIndex(TQueueRecord* queuePtr, uint32_t index)
 
     // Update the tail pointer and count to reflect the removal
     //queuePtr->tail = (queuePtr->tail + index + 1) % queuePtr->size; // Move tail to the new position
-    queuePtr->count = remainingElements; // Update the count to the number of remaining elements
+    if(index != 0)
+        queuePtr->count = remainingElements; // Update the count to the number of remaining elements
+    else
+        queuePtr->count = 1;
     queuePtr->head = remainingElements;
     TprefetchDS itemPeekLast;
-    QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, (queuePtr->head -1));
+    TprefetchDS itemReadLast;
+    if(queuePtr->head != 0)
+        QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, (queuePtr->head -1));
+    else
+        QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, 0);
     itemPeekLast.tag += 1;
+    QueueRead(queuePtr,(uint8_t*)&itemReadLast);
     QueueAppend(queuePtr, (uint8_t*)&itemPeekLast);
 
     return true; // Indicate successful removal
