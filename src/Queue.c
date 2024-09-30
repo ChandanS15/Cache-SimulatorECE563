@@ -84,16 +84,15 @@ bool QueueAppend(TQueueRecord* queuePtr, uint8_t *itemPtr)
     {
         returnStatus = false;
     }
-    else
-    {
+    else {
         //Check if queue is full
         queueFull = QueueIsFull(queuePtr);
-        // if(queueFull == true)
-        // {
-        //     returnStatus = false;
-        // }
-        // else if(queueFull == false)
-        // {
+        if(queueFull == true)
+        {
+            returnStatus = false;
+        }
+        else if(queueFull == false)
+        {
             //Append the item onto the queue
             memcpy((void*)&(queuePtr->dataPtr[queuePtr->head]), (void*)itemPtr, queuePtr->itemSize);
 
@@ -111,8 +110,8 @@ bool QueueAppend(TQueueRecord* queuePtr, uint8_t *itemPtr)
             queuePtr->count++;
             returnStatus = true;
         }
-    //}
-
+        //}
+    }
     return returnStatus;
 
 } // End of QueueAppend()
@@ -199,10 +198,10 @@ bool QueuePeek(TQueueRecord* queuePtr, uint8_t *itemPtr)
         else
         {
             //Compute the offset where data must be read from queue
-            queueOffset = queuePtr->tail * queuePtr->itemSize;
+            queueOffset = queuePtr->tail ;//* queuePtr->itemSize;
 
             //Move the queue entry onto the required memory location
-            memcpy((void*)itemPtr, (void*)((queuePtr->dataPtr) + queueOffset), queuePtr->itemSize);
+            memcpy((void*)itemPtr, (void*)(&queuePtr->dataPtr[queueOffset]), queuePtr->itemSize);
 
             returnStatus = true;
         }
@@ -314,7 +313,7 @@ bool QueuePeekByIndex(TQueueRecord* queuePtr, uint16_t *itemPtr, uint16_t peekIn
             if(peekIndex < queuePtr->count ) {
 
                 //Move the queue entry onto the required memory location
-                memcpy((void*)itemPtr, (void*)&(queuePtr->dataPtr[queueOffset]), queuePtr->itemSize);
+                memcpy((void*)itemPtr, (void*)(&queuePtr->dataPtr[queueOffset]), queuePtr->itemSize);
 
                 returnStatus = true;
             }
@@ -335,57 +334,50 @@ bool QueuePeekByIndex(TQueueRecord* queuePtr, uint16_t *itemPtr, uint16_t peekIn
 // Note          -
 // Return        -
 //------------------------------------------------------------------------------------------------------------------
-bool QueueRemoveUntilIndex(TQueueRecord* queuePtr,  uint32_t index)
+bool QueueRemoveUntilIndex(TQueueRecord* queuePtr, uint32_t index)
 {
-    bool returnStatus = true, queueEmpty;
+    TprefetchDS * itemPtr;
 
-    // Check for NULL pointers
-    if (queuePtr == NULL )
+    if (queuePtr == NULL || index >= queuePtr->count)
     {
-        returnStatus = false;
+        return false; // Return false if pointers are NULL or index is out of bounds
     }
-    else
+
+    // Copy the last element to be removed to the itemPtr (element at index)
+    uint32_t removeOffset = ((queuePtr->tail + index) % queuePtr->size) * queuePtr->itemSize;
+    memcpy((void*)itemPtr, (void*)((queuePtr->dataPtr) + removeOffset), queuePtr->itemSize);
+
+
+    // Calculate how many elements remain after the removed elements
+    uint32_t remainingElements = queuePtr->count - (index + 1);
+
+    // If there are elements to shift, proceed with shifting
+    if (remainingElements > 0)
     {
-        // Check if queue is empty
-        queueEmpty = QueueIsEmpty(queuePtr);
-        if (queueEmpty == true)
+        // Shift remaining elements from the current tail + index + 1 to the new position
+        for (uint32_t i = 0; i < remainingElements; i++)
         {
-            returnStatus = false;
-        }
-        else
-        {
-            // Ensure the index is valid
-            if (index >= queuePtr->count)
-            {
-                returnStatus = false;  // Invalid index, can't remove more than current count
-            }
-            else
-            {
-                // Remove all elements up to the specified index
-                uint32_t itemsToRemove = index ; // Including the element at the specified index
+            uint32_t currentIndex = (queuePtr->tail + index + 1 + i) % queuePtr->size;
+            uint32_t newIndex = (queuePtr->tail + i) % queuePtr->size;
 
-                for (uint32_t i = 0; i < itemsToRemove; i++)
-                {
-                    // Remove the element from the current head position
-
-                    // Move the tail pointer forward
-                    queuePtr->tail++;
-
-                    // Wrap the tail index if necessary
-                    if (queuePtr->tail == queuePtr->size)
-                    {
-                        queuePtr->tail = 0;
-                    }
-
-                    // Decrement count
-                    queuePtr->count--;
-                }
-
-                returnStatus = true;
-            }
+            // Shift each element to the new position
+            memcpy((void*)&(queuePtr->dataPtr[newIndex]),
+                   (void*)&(queuePtr->dataPtr[currentIndex]),
+                   queuePtr->itemSize);
         }
     }
 
-    return returnStatus;
+
+    // Update the tail pointer and count to reflect the removal
+    //queuePtr->tail = (queuePtr->tail + index + 1) % queuePtr->size; // Move tail to the new position
+    queuePtr->count = remainingElements; // Update the count to the number of remaining elements
+    queuePtr->head = remainingElements;
+    TprefetchDS itemPeekLast;
+    QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, (queuePtr->head -1));
+    itemPeekLast.tag += 1;
+    QueueAppend(queuePtr, (uint8_t*)&itemPeekLast);
+
+    return true; // Indicate successful removal
 }
+
 

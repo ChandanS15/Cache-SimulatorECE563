@@ -62,7 +62,7 @@ typedef enum _prefetchAvailableTag{
     ePrefetchAbsent  = 0x2
 
 
-}TprefetchStatus;
+}TprefetchAvailableStatus;
 
 typedef struct _prefetchStats{
 
@@ -154,7 +154,7 @@ typedef struct _cacheDS{
     uint8_t             numOfBlockOffsetBits;  // bits required to represent each byte in a Block.
     uint8_t             numOfTagBits;   // Bits required to represent/identify a block.
 
-    TprefetchStatus     prefetchAvailable;
+    TprefetchAvailableStatus     prefetchAvailable;
     uint8_t             numOfStreams;   // Number of prefetch streams in a particular cache level.
     uint8_t             numOfBlocksPerStream;   // Number of blocks to be stored per stream, i.e depth.
     struct _cacheSet    *cacheSetDS;

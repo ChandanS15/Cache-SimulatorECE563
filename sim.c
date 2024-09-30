@@ -126,7 +126,7 @@ int main (int argc, char *argv[]) {
 
    while (fscanf(fp, "%c %x\n", &rw, &addr) == 2) {	// Stay in the loop if fscanf() successfully parsed two tokens as specified.
       count++;
-      if(count == 661) {
+      if(count == 89) {
          count++;
          count--;
       }

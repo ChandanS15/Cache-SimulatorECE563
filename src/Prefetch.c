@@ -20,7 +20,8 @@ void RetrievePrefetchAddress(TCacheDS *cacheDSPtr, uint32_t index, uint32_t tag,
 // Note          -
 // Return        -
 //------------------------------------------------------------------------------------------------------------------
-TprefetchDS *SearchTagInPrefetch(TLinkedListNode *headPtr, uint32_t tag, bool *prefetchTagSearchStatus, uint32_t *retrievedPrefetchIndex, uint32_t *retrievedPrefetchStream) {
+TprefetchDS *SearchTagInPrefetch(TLinkedListNode *headPtr,uint32_t index, uint32_t tag,
+                                bool *prefetchTagSearchStatus, uint32_t *retrievedPrefetchIndex, uint32_t *retrievedPrefetchStream) {
 
     TLinkedListNode *cursorPtr = headPtr;
 
@@ -34,6 +35,7 @@ TprefetchDS *SearchTagInPrefetch(TLinkedListNode *headPtr, uint32_t tag, bool *p
     TprefetchDS *retrievePrefetchData = (TprefetchDS*)malloc(sizeof(TprefetchDS));
     bool queueRemoveStatus = false;
 
+    uint32_t tagToSearchInPrefetch = (tag << cursorPtr->cacheLevelPtr->numOfIndexBits) | index;
     // Search for the block availability in all the queue streams.
     for(uint16_t searchQueueIndex = 0 ; searchQueueIndex < cursorPtr->cacheLevelPtr->numOfStreams; searchQueueIndex++) {
         for(uint16_t searchTagIndex = 0; searchTagIndex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; searchTagIndex++) {
@@ -41,12 +43,16 @@ TprefetchDS *SearchTagInPrefetch(TLinkedListNode *headPtr, uint32_t tag, bool *p
             // Retrieve the data from a particular index of the prefetch stream and check if the tag we are searching for is available.
             // if available return that particular prefetch block back.
             queuePeekStatus = QueuePeekByIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[searchQueueIndex], (uint16_t*)retrievePrefetchData, searchTagIndex);
-            if(queuePeekStatus == true && retrievePrefetchData->tag == tag){
+            if(queuePeekStatus == true &&
+                (retrievePrefetchData->tag ) == (tagToSearchInPrefetch)){
                 *prefetchTagSearchStatus = true;
                 *retrievedPrefetchIndex = searchTagIndex;
                 *retrievedPrefetchStream = searchQueueIndex;
                 //RemoveTagsFromPrefetch(&cursorPtr->cacheLevelPtr->prefetchQueue[searchQueueIndex], searchTagIndex);
                 return retrievePrefetchData;
+            }
+            else {
+                *prefetchTagSearchStatus = false;
             }
         }
     }
@@ -59,46 +65,70 @@ void FillPrefetchBuffer(TLinkedListNode *headPtr, uint32_t index, uint32_t tag) 
     uint16_t prefetchIndex = 0;
     uint16_t numOfStreams = 0;
     TprefetchDS prefetchData;
+    TprefetchDS prefetchDataRemoved;
     uint16_t lruPrefetchStreamIndex = 0;
 
 
 
-    uint32_t reqIndex = 0;  uint32_t reqTag = 0;  uint32_t reqBlockOffset = 0;
-    uint32_t returnedAddress = 0;
-    RetrievePrefetchAddress(cursorPtr->cacheLevelPtr, index, tag, &returnedAddress);
+    uint32_t tagToInsert = (tag << cursorPtr->cacheLevelPtr->numOfIndexBits) | (index + 1);
 
-    reqTag = returnedAddress >> cursorPtr->cacheLevelPtr->numOfBlockOffsetBits;
-    prefetchData.tag = ++reqTag;
+    prefetchData.tag = tagToInsert;
     prefetchData.data = 0;
+    if(cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent) {
+        lruPrefetchStreamIndex = FindLRUPrefetch(cursorPtr);
+        cursorPtr->cacheLevelPtr->prefetchQueue[lruPrefetchStreamIndex].validBit = true;
+        for(prefetchIndex = 0; prefetchIndex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; prefetchIndex++) {
 
-    lruPrefetchStreamIndex = FindLRUPrefetch(cursorPtr);
-    cursorPtr->cacheLevelPtr->prefetchQueue[lruPrefetchStreamIndex].validBit = true;
-    for(numOfStreams = 0; numOfStreams < cursorPtr->cacheLevelPtr->numOfStreams; numOfStreams++) {
+            QueueRead(&cursorPtr->cacheLevelPtr->prefetchQueue[lruPrefetchStreamIndex], (uint8_t*)&prefetchDataRemoved);
+        }
         for(prefetchIndex = 0; prefetchIndex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; prefetchIndex++) {
 
             QueueAppend(&cursorPtr->cacheLevelPtr->prefetchQueue[lruPrefetchStreamIndex], (uint8_t*)&prefetchData);
 
             prefetchData.tag++;
+           // cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount +=1 ;
         }
-        cursorPtr->cacheLevelPtr->prefetchQueue[lruPrefetchStreamIndex].count = 4;
+        UpdatePrefetchLRU(cursorPtr, lruPrefetchStreamIndex);
     }
 }
 
+
+
+void UpdatePrefetchLRU(TLinkedListNode *headPtr, uint32_t lruPrefetchStreamIndex) {
+
+    TLinkedListNode *cursorPtr = headPtr;
+
+    // When Cache hit occurs make sure the Index where the tag value was found
+    // must be reset and other values lesser than that in terms of usefulness must be incremented.
+    for(uint8_t searchLRU = 0; searchLRU < cursorPtr->cacheLevelPtr->numOfStreams; searchLRU++) {
+
+        // Increment the counter values of other ways(counter) to monitor LRU.
+        if(cursorPtr->cacheLevelPtr->prefetchQueue[searchLRU].lruIndex  <
+            cursorPtr->cacheLevelPtr->prefetchQueue[lruPrefetchStreamIndex].lruIndex) {
+
+            cursorPtr->cacheLevelPtr->prefetchQueue[searchLRU].lruIndex  += 1;
+
+            }
+    }
+    cursorPtr->cacheLevelPtr->prefetchQueue[lruPrefetchStreamIndex].lruIndex = 0;
+}
 
 uint32_t FindLRUPrefetch(TLinkedListNode *headPtr) {
     TLinkedListNode *cursorPtr = headPtr;
     uint32_t prefetchStreamIndex = 0;
     uint32_t lruIndex = 0;
-
-    lruIndex = cursorPtr->cacheLevelPtr->prefetchQueue[0].lruIndex;
+    uint32_t maxlruIndexValue = 0;
+    if(cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent) {
+    maxlruIndexValue = cursorPtr->cacheLevelPtr->prefetchQueue[0].lruIndex;
 
     for(prefetchStreamIndex = 0; prefetchStreamIndex < cursorPtr->cacheLevelPtr->numOfStreams; prefetchStreamIndex++) {
 
-        if(cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex].lruIndex > lruIndex) {
-            lruIndex = cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex].lruIndex;
+        if(cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex].lruIndex > maxlruIndexValue) {
+            lruIndex = prefetchStreamIndex;
         }
     }
     return lruIndex;
+    }
 }
 
 void ExtractPrefetchAddress(TCacheDS *cacheDSPtr, uint32_t memAddress, uint32_t *tag, uint32_t *index) {
@@ -131,6 +161,19 @@ void RetrievePrefetchAddress(TCacheDS *cacheDSPtr, uint32_t index, uint32_t tag,
 
         *memAddress = retreivedIndex | retreivedTag;
     }
+}
+
+void RetrieveTagFromPrefetch(TLinkedListNode *headPtr, uint32_t tagFoundInPrefetchStream, uint32_t tagFoundInPrefetchIndex, uint32_t index , TprefetchDS *retrievedTag) {
+    TLinkedListNode *cursorPtr = headPtr;
+
+    bool peekByIndexStatus = QueuePeekByIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[tagFoundInPrefetchStream], (uint16_t *)retrievedTag,
+                                tagFoundInPrefetchIndex);
+
+    TprefetchDS prefetchStreamLastTagValue;
+    bool peekLastBlockStatus = QueuePeek(&cursorPtr->cacheLevelPtr->prefetchQueue[tagFoundInPrefetchStream],
+                                        (uint8_t *)&prefetchStreamLastTagValue);
+    *retrievedTag = prefetchStreamLastTagValue;
+    QueueRemoveUntilIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[tagFoundInPrefetchStream],  tagFoundInPrefetchIndex);
 
 
 }

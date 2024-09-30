@@ -52,6 +52,7 @@ void CacheDSInit(TCacheDS* cacheDSPtr, char* name, uint32_t blockSize, uint32_t 
     cacheDSPtr->prefetchStatistics.missCount = 0;
     cacheDSPtr->prefetchStatistics.prefetchCount = 0;
     cacheDSPtr->prefetchStatistics.readCount = 0;
+    cacheDSPtr->prefetchStatistics.hitCount = 0;
     cacheDSPtr->totalMemoryTraffic = 0;
 
                  }
