@@ -106,7 +106,7 @@ bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *load
                         RetrieveTagFromPrefetch(cursorPtr, tagFoundInPrefetchStream, tagFoundInPrefetchIndex, index, &retreivedTag);
                         cursorPtr->cacheLevelPtr->prefetchStatistics.hitCount += 1;
                         cursorPtr->cacheLevelPtr->cacheStatistics.hitCount += 1;
-                        cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount -= 1;
+                        //cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount -= 1;
                         cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = retreivedTag.tag >> cursorPtr->cacheLevelPtr->numOfIndexBits;
                         //cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
                         cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = false;
@@ -155,7 +155,7 @@ bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *load
                         TprefetchDS retreivedTag;
                         RetrieveTagFromPrefetch(cursorPtr, tagFoundInPrefetchStream, tagFoundInPrefetchIndex, index, &retreivedTag);
                         cursorPtr->cacheLevelPtr->prefetchStatistics.hitCount += 1;
-                        cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount -= 1;
+                        //cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount -= 1;
                         cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = retreivedTag.tag >> cursorPtr->cacheLevelPtr->numOfIndexBits;
                         cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = false;
 
@@ -260,7 +260,7 @@ bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t data
             QueuePeekByIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[tagFoundInPrefetchStream], (uint16_t *) &prefetchLastTag, tagFoundInPrefetchIndex);
             bool peekStatus = QueuePeek(&cursorPtr->cacheLevelPtr->prefetchQueue[tagFoundInPrefetchStream],(uint8_t*)&prefetchLastTag);
             if(peekStatus == true)
-                FillPrefetchBuffer(cursorPtr, index, prefetchLastTag.tag);
+                FillPrefetchBuffer(cursorPtr, index, (prefetchLastTag.tag>> cursorPtr->cacheLevelPtr->numOfIndexBits));
         }
         cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[tagFoundIndex].tag = tag;
         cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[tagFoundIndex].valid = true;
@@ -300,7 +300,7 @@ bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t data
                     RetrieveTagFromPrefetch(cursorPtr, tagFoundInPrefetchStream, tagFoundInPrefetchIndex, index, &retreivedTag);
                     cursorPtr->cacheLevelPtr->prefetchStatistics.hitCount += 1;
                     cursorPtr->cacheLevelPtr->cacheStatistics.hitCount += 1;
-                    cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount -= 1;
+                    //cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount -= 1;
                     cursorPtr->cacheLevelPtr->cacheStatistics.writeMissCount -= 1;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = retreivedTag.tag >> cursorPtr->cacheLevelPtr->numOfIndexBits;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
@@ -316,6 +316,11 @@ bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t data
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
                     UpdateLRUCounters(cursorPtr, index, lRUIndex);
                 }
+                cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
+                cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
+                cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = tag;
+                cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
+                UpdateLRUCounters(cursorPtr, index, lRUIndex);
 
             } else {
                 // dirty bit not set just request blopck form the next level and install
@@ -673,7 +678,7 @@ void WriteBack(TLinkedListNode *headPtr, uint32_t memAddress) {
                 bool peekStatus = QueuePeek(&cursorPtr->cacheLevelPtr->prefetchQueue[tagFoundInPrefetchStream],(uint8_t*)&prefetchLastTag);
 
                 if(peekStatus == true)
-                    FillPrefetchBuffer(cursorPtr, index, prefetchLastTag.tag);
+                    FillPrefetchBuffer(cursorPtr, index, (prefetchLastTag.tag>> cursorPtr->cacheLevelPtr->numOfIndexBits));
             }
             // If hit update the pre-existing block and set dirty bit
             cursorPtr->cacheLevelPtr->cacheStatistics.hitCount += 1;
