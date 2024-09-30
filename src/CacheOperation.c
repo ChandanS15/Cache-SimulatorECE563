@@ -318,7 +318,8 @@ bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t data
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
                     UpdateLRUCounters(cursorPtr, index, lRUIndex);
                 }
-                cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
+                if(cursorPtr->nextPtr == NULL)
+                    cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
                 cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
                 cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = tag;
                 cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
