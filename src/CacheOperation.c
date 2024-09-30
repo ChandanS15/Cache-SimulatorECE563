@@ -115,7 +115,7 @@ bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *load
                     } else if (tagFoundInPrefetchStatus == eCacheMissInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent)){
                         requestedAddress = memAddress;
                         ExtractAddress(cursorPtr->cacheLevelPtr, requestedAddress, &reqTag, &reqIndex, &reqBlockOffset);
-                        cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
+                        //cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
                         if(cursorPtr->nextPtr == NULL) {
                             cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
                         }
@@ -310,13 +310,14 @@ bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t data
                     FillPrefetchBuffer(cursorPtr, index, tag);
                     cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount += (cursorPtr->cacheLevelPtr->numOfBlocksPerStream+ 1);
                     cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount += cursorPtr->cacheLevelPtr->numOfBlocksPerStream;
-                    cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
+                    // Check if I have to remove this or the above one
+                    //cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
                     cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = tag;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
                     UpdateLRUCounters(cursorPtr, index, lRUIndex);
                 }
-                cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
+                //cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
                 cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
                 cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = tag;
                 cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
