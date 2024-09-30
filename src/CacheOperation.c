@@ -89,10 +89,15 @@ bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *load
                 if(cursorPtr->nextPtr != NULL) {
                     WriteBack(cursorPtr, writeBackAddress);
                     requestedAddress = CacheBlockRequest(cursorPtr, memAddress);
+                    ExtractAddress(cursorPtr->cacheLevelPtr, requestedAddress, &reqTag, &reqIndex, &reqBlockOffset);
+                    cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
+                    if(cursorPtr->nextPtr == NULL) {
+                        cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
+                    }
+
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = reqTag;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = false;
-                    FillPrefetchBuffer(cursorPtr, index, reqTag);
-                    cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount += (cursorPtr->cacheLevelPtr->numOfBlocksPerStream+ 1);
+
                     UpdateLRUCounters(cursorPtr, index, lRUIndex);
                 } else {
                     if(tagFoundInPrefetchStatus == eCacheHitInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent))  {
@@ -141,7 +146,6 @@ bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *load
                 uint32_t requestedAddress = 0;
                 if(cursorPtr->nextPtr != NULL) {
                     requestedAddress = CacheBlockRequest(cursorPtr, memAddress);
-                    requestedAddress = memAddress;
                     ExtractAddress(cursorPtr->cacheLevelPtr, requestedAddress, &reqTag, &reqIndex, &reqBlockOffset);
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = reqTag;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].valid = true;
@@ -157,7 +161,7 @@ bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *load
 
                     } else if (tagFoundInPrefetchStatus == eCacheMissInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent)) {
                         requestedAddress = memAddress;
-                        cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount += 1;
+                        //cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount += 1;
                         ExtractAddress(cursorPtr->cacheLevelPtr, requestedAddress, &reqTag, &reqIndex, &reqBlockOffset);
                         cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = reqTag;
                         cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].valid = true;
@@ -186,7 +190,6 @@ bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *load
             // Request the mem address present in the next level of hierarchy.
             if(cursorPtr->nextPtr != NULL) {
                 requestedAddress = CacheBlockRequest(cursorPtr, memAddress);
-                requestedAddress = memAddress;
                 ExtractAddress(cursorPtr->cacheLevelPtr, requestedAddress, &reqTag, &reqIndex, &reqBlockOffset);
                 cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[emptyTagIndex].tag = reqTag;
                 cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[emptyTagIndex].valid = true;
@@ -313,11 +316,6 @@ bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t data
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
                     UpdateLRUCounters(cursorPtr, index, lRUIndex);
                 }
-                cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
-                cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
-                cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = tag;
-                cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
-                UpdateLRUCounters(cursorPtr, index, lRUIndex);
 
             } else {
                 // dirty bit not set just request blopck form the next level and install
