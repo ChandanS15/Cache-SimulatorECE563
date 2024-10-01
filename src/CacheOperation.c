@@ -71,9 +71,9 @@ bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *load
 
         // This handles a single level of memory.
         // Check if this is the last level of heirarchy
-        if(cursorPtr->nextPtr == NULL && cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchAbsent) {
-            cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
-        }
+        // if(cursorPtr->nextPtr == NULL && cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchAbsent) {
+        //     cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
+        // }
 
         // If we face cache miss follow this flow.
         cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount += 1;

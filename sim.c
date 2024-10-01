@@ -126,63 +126,6 @@ int main (int argc, char *argv[]) {
 
    while (fscanf(fp, "%c %x\n", &rw, &addr) == 2) {	// Stay in the loop if fscanf() successfully parsed two tokens as specified.
       count++;
-      if(count == 19) {
-         count++;
-         count--;
-      }
-      // if(cacheL2->prefetchQueue[0].dataPtr[0].tag == cacheL2->prefetchQueue[0].dataPtr[1].tag) {
-      //
-      //    uint32_t hey = 0;
-      // }
-
-      if(count == 99669) {
-         count++;
-         count--;
-      }
-      if(count == 99915) {
-         count++;
-         count--;
-      }
-
-      if(count == 99931) {
-         count++;
-         count--;
-      }
-
-      if(count == 99939) {
-         count++;
-         count--;
-      }
-
-      if(count == 99947) {
-         count++;
-         count--;
-      }
-
-      if(count == 99955) {
-         count++;
-         count--;
-      }
-
-      if(count == 99963) {
-         count++;
-         count--;
-      }
-
-      if(count == 99979) {
-         count++;
-         count--;
-      }
-
-      if(count == 99995) {
-         count++;
-         count--;
-      }
-      // if(cacheL1->prefetchQueue[0].dataPtr[1].tag == 0 ||
-      //    cacheL1->prefetchQueue[0].dataPtr[0].tag == 0  || cacheL1->prefetchQueue[0].dataPtr[2].tag == 0
-      //    || cacheL1->prefetchQueue[0].dataPtr[3].tag == 0) {
-      //    uint32_t counts = 0;
-      // }
       if (rw == 'r') {
             //printf("r %x\n", addr);
             loadStoreStatus = CacheLoadData(headLL,addr,&loadedValue);
@@ -262,54 +205,52 @@ void PrintCacheContents( TLinkedListNode *headPtr) {
 #endif
 
     while ( cursorPtr != NULL ) {
-
-
-        // Print the Contents of the respective Cache
+       // Print the Contents of the respective Cache
 #ifdef DEBUG_AVAILABLE
-        printf("\n");
-        printf( "===== %s contents =====",cursorPtr->cacheLevelPtr->name);
-        printf( "\n");
+       printf("\n");
+       printf( "===== %s contents =====",cursorPtr->cacheLevelPtr->name);
+       printf( "\n");
 #endif
 #ifdef GENERATE_FILE
-        fprintf(file, "\n");
-        fprintf(file,"===== %s contents =====",cursorPtr->cacheLevelPtr->name);
-        fprintf(file, "\n");
+       fprintf(file, "\n");
+       fprintf(file,"===== %s contents =====",cursorPtr->cacheLevelPtr->name);
+       fprintf(file, "\n");
 #endif
 
 
-        for(indexValue =0; indexValue < cursorPtr->cacheLevelPtr->numOfSets; indexValue++) {
+       for(indexValue =0; indexValue < cursorPtr->cacheLevelPtr->numOfSets; indexValue++) {
 #ifdef DEBUG_AVAILABLE
-           printf("set    %d:",indexValue);
+          printf("set    %d:",indexValue);
 #endif
 #ifdef GENERATE_FILE
-           fprintf(file,"set    %d:",indexValue);
+          fprintf(file,"set    %d:",indexValue);
 #endif
 
-uint32_t tagIndex = 0;
-           uint32_t countIndex = 0;
+          uint32_t tagIndex = 0;
+          uint32_t countIndex = 0;
 
-           while(tagIndex < cursorPtr->cacheLevelPtr->assoc) {
-              for(tagValue =0; tagValue < cursorPtr->cacheLevelPtr->assoc; tagValue++) {
-                 if(cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].counter == countIndex  ) {
+          while(tagIndex < cursorPtr->cacheLevelPtr->assoc) {
+             for(tagValue =0; tagValue < cursorPtr->cacheLevelPtr->assoc; tagValue++) {
+                if(cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].counter == countIndex  ) {
 #ifdef DEBUG_AVAILABLE
-                    printf("     %x %s", cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].tag, (cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].dirty == true) ? "D" : " " );
+                   printf("     %x %s", cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].tag, (cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].dirty == true) ? "D" : " " );
 #endif
 #ifdef GENERATE_FILE
-                    fprintf(file,"    %x %s ", cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].tag, (cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].dirty == true) ? "D" : " ");
+                   fprintf(file,"    %x %s ", cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].tag, (cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].dirty == true) ? "D" : " ");
 #endif
-                 }
-              }
-              countIndex++;
-              tagIndex ++;
-           }
+                }
+             }
+             countIndex++;
+             tagIndex ++;
+          }
 
 #ifdef DEBUG_AVAILABLE
-           printf("\n");
+          printf("\n");
 #endif
 #ifdef GENERATE_FILE
-           fprintf(file,"\n");
+          fprintf(file,"\n");
 #endif
-        }
+       }
 
        // Print prefetch Stream buffers content if available
        if(cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent) {
@@ -321,31 +262,38 @@ uint32_t tagIndex = 0;
           fprintf(file,"\n");
           fprintf(file,"===== Stream Buffer (s) contents =====\n");
 #endif
-          for(prefetchStreamIndex =0; prefetchStreamIndex < cursorPtr->cacheLevelPtr->numOfStreams; prefetchStreamIndex++) {
-             for(prefetchBlockIndex = 0; prefetchBlockIndex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; prefetchBlockIndex++) {
-                bool queuePeekStatus = QueuePeekByIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex],
-                                                        (uint16_t *) retrievePrefetchData, prefetchBlockIndex);
-                // Print the contents of the prefetch Buffer
-                if(queuePeekStatus == true) {
+          uint32_t tagIndex = 0;
+          uint32_t countIndex = 0;
+          uint32_t maxCounterValue = cursorPtr->cacheLevelPtr->prefetchQueue[0].lruIndex;
+          while(tagIndex < cursorPtr->cacheLevelPtr->numOfStreams) {
+             for(prefetchStreamIndex =0; prefetchStreamIndex < cursorPtr->cacheLevelPtr->numOfStreams; prefetchStreamIndex++) {
+                if(cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex].lruIndex == countIndex ) {
+                   for(prefetchBlockIndex = 0; prefetchBlockIndex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; prefetchBlockIndex++) {
+                      bool queuePeekStatus = QueuePeekByIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex],
+                                                              (uint16_t *) retrievePrefetchData, prefetchBlockIndex);
+                      // Print the contents of the prefetch Buffer
+                      if(queuePeekStatus == true) {
 #ifdef DEBUG_AVAILABLE
-                   printf("%x  ", retrievePrefetchData->tag);
+                         printf("%x  ", retrievePrefetchData->tag);
 #endif
 #ifdef GENERATE_FILE
-                   fprintf(file,"%x  ", retrievePrefetchData->tag);
+                         fprintf(file,"%x  ", retrievePrefetchData->tag);
+#endif
+                      }
+                   }
+#ifdef DEBUG_AVAILABLE
+                   printf("\n");
+#endif
+#ifdef GENERATE_FILE
+                   fprintf(file,"\n");
 #endif
                 }
-             }
-#ifdef DEBUG_AVAILABLE
-             printf("\n");
-#endif
-#ifdef GENERATE_FILE
-             fprintf(file,"\n");
-#endif
 
+             }                tagIndex++;
+             countIndex++;
           }
 
-       }
-        cursorPtr = cursorPtr->nextPtr;
+       }cursorPtr = cursorPtr->nextPtr;
     }
 
    // After printing the contents of the cache print the Measurments.
