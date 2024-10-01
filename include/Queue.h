@@ -82,7 +82,9 @@ bool QueueIsEmpty(TQueueRecord* queuePtr);
 // Return        - 
 //------------------------------------------------------------------------------------------------------------------
 uint32_t QueueGetCount(TQueueRecord* queuePtr);
-
+bool QueueReadHead(TQueueRecord* queuePtr, uint8_t *itemPtr);
+bool QueueAppendTail(TQueueRecord* queuePtr, uint8_t *itemPtr);
 bool QueuePeekByIndex(TQueueRecord* queuePtr, uint16_t *itemPtr, uint16_t peekIndex);
 bool QueueRemoveUntilIndex(TQueueRecord* queuePtr, uint32_t index);
+bool QueueAppendByIndex(TQueueRecord* queuePtr, uint16_t *itemPtr, uint16_t appendIndex);
 #endif

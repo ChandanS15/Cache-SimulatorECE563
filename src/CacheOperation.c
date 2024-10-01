@@ -310,9 +310,7 @@ bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t data
                     FillPrefetchBuffer(cursorPtr, index, tag);
                     cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount += (cursorPtr->cacheLevelPtr->numOfBlocksPerStream+ 1);
                     cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount += cursorPtr->cacheLevelPtr->numOfBlocksPerStream;
-                    // Check if I have to remove this or the above one
-                    //if(cursorPtr->nextPtr == NULL)
-                        cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
+                    cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
                     cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = tag;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
@@ -489,7 +487,7 @@ uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress) {
     uint16_t tagFoundIndex = 0;  uint32_t index = 0;  uint32_t tag = 0;  uint32_t blockOffset = 0;
     uint16_t lRUIndex = 0; uint32_t requestedBlock;uint16_t tagFoundInPrefetchIndex = 0; uint16_t tagFoundInPrefetchStream = 0;
     bool isCacheSetFull = false;
-    TCacheSearchStatus tagFoundInPrefetchStatus = false;
+    TPrefetchSearchStatus tagFoundInPrefetchStatus = false;
 
     while (cursorPtr != NULL) {
         cursorPtr->cacheLevelPtr->cacheStatistics.readCount += 1;
@@ -506,6 +504,15 @@ uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress) {
             cursorPtr->cacheLevelPtr->cacheStatistics.hitCount += 1;
             UpdateLRUCounters(cursorPtr,index,tagFoundIndex);
             RetrieveAddress(cursorPtr->cacheLevelPtr, index, cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[tagFoundIndex].tag, &requestedBlock);
+            if(tagFoundInPrefetchStatus == eCacheHitInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent)) {
+                TprefetchDS prefetchLastTag;
+                TprefetchDS newPrefetch;
+                QueueRemoveUntilIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[tagFoundInPrefetchStream],  tagFoundInPrefetchIndex);
+                QueuePeekByIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[tagFoundInPrefetchStream], (uint16_t *) &prefetchLastTag, tagFoundInPrefetchIndex);
+                bool peekStatus = QueuePeek(&cursorPtr->cacheLevelPtr->prefetchQueue[tagFoundInPrefetchStream],(uint8_t*)&prefetchLastTag);
+                if(peekStatus == true)
+                    FillPrefetchBuffer(cursorPtr, index, (prefetchLastTag.tag>> cursorPtr->cacheLevelPtr->numOfIndexBits));
+            }
             return requestedBlock;
 
         } else if(searchStatus == eCacheMiss) {
@@ -533,6 +540,28 @@ uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress) {
                             WriteBack(cursorPtr, writeBackAddress);
                             requestedAddress = CacheBlockRequest(cursorPtr, memAddress);
                         }
+                        if(tagFoundInPrefetchStatus == eCacheHitInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent))  {
+                            TprefetchDS retreivedTag;
+                            RetrieveTagFromPrefetch(cursorPtr, tagFoundInPrefetchStream, tagFoundInPrefetchIndex, index, &retreivedTag);
+                            cursorPtr->cacheLevelPtr->prefetchStatistics.hitCount += 1;
+                            cursorPtr->cacheLevelPtr->cacheStatistics.hitCount += 1;
+                            //cursorPtr->cacheLevelPtr->cacheStatistics.writeMissCount -= 1;
+                            cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = retreivedTag.tag >> cursorPtr->cacheLevelPtr->numOfIndexBits;
+                            cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
+                            RetrieveAddress(cursorPtr->cacheLevelPtr, index, cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag, &requestedBlock);
+                            return requestedBlock;
+
+                        } else if (tagFoundInPrefetchStatus == eCacheMissInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent)){
+
+                            FillPrefetchBuffer(cursorPtr, index, tag);
+                            cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount += (cursorPtr->cacheLevelPtr->numOfBlocksPerStream+ 1);
+                            cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount += cursorPtr->cacheLevelPtr->numOfBlocksPerStream;
+                            cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
+                            cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
+                            cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = tag;
+                            cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
+                            UpdateLRUCounters(cursorPtr, index, lRUIndex);
+                        }
 
 
                         // If the block is not found in the L2 go to the next level to allocate and write data.
@@ -556,6 +585,32 @@ uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress) {
 
 
                 }else if(isCacheSetFull==false) {
+                    // if the cache is not full just install the block into the empty tag after requesting the data from the next level.
+                    uint32_t requestedAddress = 0;
+                    // Extract the index adn tag from the retrieved block address.
+                    uint32_t reqIndex = 0;  uint32_t reqTag = 0;  uint32_t reqBlockOffset = 0;
+                    if(tagFoundInPrefetchStatus == eCacheHitInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent))  {
+                        TprefetchDS retreivedTag;
+                        RetrieveTagFromPrefetch(cursorPtr, tagFoundInPrefetchStream, tagFoundInPrefetchIndex, index, &retreivedTag);
+                        cursorPtr->cacheLevelPtr->prefetchStatistics.hitCount += 1;
+
+                        //cursorPtr->cacheLevelPtr->cacheStatistics.writeMissCount -= 1;
+                        cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = retreivedTag.tag >> cursorPtr->cacheLevelPtr->numOfIndexBits;
+                        cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
+                        RetrieveAddress(cursorPtr->cacheLevelPtr, index, cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag, &requestedBlock);
+                        return requestedBlock;
+
+
+                    } else if (tagFoundInPrefetchStatus == eCacheMissInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent)) {
+                        requestedAddress = memAddress;
+                        cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount += 1;
+                        ExtractAddress(cursorPtr->cacheLevelPtr, requestedAddress, &reqTag, &reqIndex, &reqBlockOffset);
+                        cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = reqTag;
+                        cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
+                        cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].valid = true;
+                        FillPrefetchBuffer(cursorPtr, index, reqTag);
+                        UpdateLRUCounters(cursorPtr, index, lRUIndex);
+                    }
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[emptyTagIndex].tag = tag;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[emptyTagIndex].valid = true;
                     UpdateLRUCounters(cursorPtr, index, emptyTagIndex);
@@ -673,13 +728,10 @@ void WriteBack(TLinkedListNode *headPtr, uint32_t memAddress) {
         if(searchStatus == eCacheHit) {
             if(tagFoundInPrefetchStatus == eCacheHitInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent)) {
                 TprefetchDS prefetchLastTag;
-
                 TprefetchDS newPrefetch;
                 QueueRemoveUntilIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[tagFoundInPrefetchStream],  tagFoundInPrefetchIndex);
-
-
+                QueuePeekByIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[tagFoundInPrefetchStream], (uint16_t *) &prefetchLastTag, tagFoundInPrefetchIndex);
                 bool peekStatus = QueuePeek(&cursorPtr->cacheLevelPtr->prefetchQueue[tagFoundInPrefetchStream],(uint8_t*)&prefetchLastTag);
-
                 if(peekStatus == true)
                     FillPrefetchBuffer(cursorPtr, index, (prefetchLastTag.tag>> cursorPtr->cacheLevelPtr->numOfIndexBits));
             }
@@ -701,6 +753,28 @@ void WriteBack(TLinkedListNode *headPtr, uint32_t memAddress) {
                         cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
                         if(cursorPtr->nextPtr != NULL)
                             WriteBack(cursorPtr, memAddress);
+                        if(tagFoundInPrefetchStatus == eCacheHitInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent))  {
+                            TprefetchDS retreivedTag;
+                            RetrieveTagFromPrefetch(cursorPtr, tagFoundInPrefetchStream, tagFoundInPrefetchIndex, index, &retreivedTag);
+                            cursorPtr->cacheLevelPtr->prefetchStatistics.hitCount += 1;
+                            cursorPtr->cacheLevelPtr->cacheStatistics.hitCount += 1;
+                            //cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount -= 1;
+                            cursorPtr->cacheLevelPtr->cacheStatistics.writeMissCount -= 1;
+                            cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = retreivedTag.tag >> cursorPtr->cacheLevelPtr->numOfIndexBits;
+                            cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
+
+                        } else if (tagFoundInPrefetchStatus == eCacheMissInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent)){
+
+                            FillPrefetchBuffer(cursorPtr, index, tag);
+                            cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount += (cursorPtr->cacheLevelPtr->numOfBlocksPerStream+ 1);
+                            cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount += cursorPtr->cacheLevelPtr->numOfBlocksPerStream;
+                            cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
+                            cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
+                            cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = tag;
+                            cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
+                            UpdateLRUCounters(cursorPtr, index, lRUIndex);
+                        }
+
                     }
                     cursorPtr->cacheLevelPtr->cacheStatistics.writeMissCount += 1;
                     cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
@@ -711,6 +785,29 @@ void WriteBack(TLinkedListNode *headPtr, uint32_t memAddress) {
                     //cursorPtr->cacheLevelPtr->totalMemoryTraffic += 2;
 
                 } else if(isCacheSetFull == false) {
+                    // if the cache is not full just install the block into the empty tag after requesting the data from the next level.
+                    uint32_t requestedAddress = 0;
+                    // Extract the index adn tag from the retrieved block address.
+                    uint32_t reqIndex = 0;  uint32_t reqTag = 0;  uint32_t reqBlockOffset = 0;
+                    if(tagFoundInPrefetchStatus == eCacheHitInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent))  {
+                        TprefetchDS retreivedTag;
+                        RetrieveTagFromPrefetch(cursorPtr, tagFoundInPrefetchStream, tagFoundInPrefetchIndex, index, &retreivedTag);
+                        cursorPtr->cacheLevelPtr->prefetchStatistics.hitCount += 1;
+
+                        //cursorPtr->cacheLevelPtr->cacheStatistics.writeMissCount -= 1;
+                        cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = retreivedTag.tag >> cursorPtr->cacheLevelPtr->numOfIndexBits;
+                        cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
+
+                    } else if (tagFoundInPrefetchStatus == eCacheMissInPrefetch && (cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent)) {
+                        requestedAddress = memAddress;
+                        cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount += 1;
+                        ExtractAddress(cursorPtr->cacheLevelPtr, requestedAddress, &reqTag, &reqIndex, &reqBlockOffset);
+                        cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = reqTag;
+                        cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = true;
+                        cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].valid = true;
+                        FillPrefetchBuffer(cursorPtr, index, reqTag);
+                        UpdateLRUCounters(cursorPtr, index, lRUIndex);
+                    }
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[emptyTagIndex].tag = tag;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[emptyTagIndex].valid   = true;
                     cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[emptyTagIndex].dirty = true;

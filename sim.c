@@ -126,6 +126,15 @@ int main (int argc, char *argv[]) {
 
    while (fscanf(fp, "%c %x\n", &rw, &addr) == 2) {	// Stay in the loop if fscanf() successfully parsed two tokens as specified.
       count++;
+      if(count == 19) {
+         count++;
+         count--;
+      }
+      if(cacheL2->prefetchQueue[0].dataPtr[0].tag == cacheL2->prefetchQueue[0].dataPtr[1].tag) {
+
+         uint32_t hey = 0;
+      }
+
       if(count == 99669) {
          count++;
          count--;
@@ -169,6 +178,11 @@ int main (int argc, char *argv[]) {
          count++;
          count--;
       }
+      // if(cacheL1->prefetchQueue[0].dataPtr[1].tag == 0 ||
+      //    cacheL1->prefetchQueue[0].dataPtr[0].tag == 0  || cacheL1->prefetchQueue[0].dataPtr[2].tag == 0
+      //    || cacheL1->prefetchQueue[0].dataPtr[3].tag == 0) {
+      //    uint32_t counts = 0;
+      // }
       if (rw == 'r') {
             //printf("r %x\n", addr);
             loadStoreStatus = CacheLoadData(headLL,addr,&loadedValue);
@@ -259,6 +273,7 @@ void PrintCacheContents( TLinkedListNode *headPtr) {
 #ifdef GENERATE_FILE
         fprintf(file, "\n");
         fprintf(file,"===== %s contents =====",cursorPtr->cacheLevelPtr->name);
+        fprintf(file, "\n");
 #endif
 
 
@@ -397,6 +412,7 @@ void PrintMeasurements(TLinkedListNode *headPtr) {
    }
 #endif
 #ifdef GENERATE_FILE
+      fprintf(file,"\n");
       fprintf(file,"===== Measurements =====\n");
       fprintf(file,"a. L1 reads:    %d\n",cursorPtr->cacheLevelPtr->cacheStatistics.readCount);
       fprintf(file,"b. L1 read misses:    %d\n",cursorPtr->cacheLevelPtr->cacheStatistics.readMissCount);
@@ -421,8 +437,8 @@ void PrintMeasurements(TLinkedListNode *headPtr) {
    } else {
       fprintf(file,"h. L2 reads (demand):    %d\n",defaultValue);
       fprintf(file,"i. L2 read misses (demand):    %d\n",defaultValue);
-      fprintf(file,"h. L2 reads (prefetch):    %d\n",defaultValue);
-      fprintf(file,"i. L2 read misses (prefetch):    %d\n",defaultValue);
+      fprintf(file,"j. L2 reads (prefetch):    %d\n",defaultValue);
+      fprintf(file,"k. L2 read misses (prefetch):    %d\n",defaultValue);
       fprintf(file,"l. L2 writes:    %d\n",defaultValue);
       fprintf(file,"m. L2 write misses:    %d\n",defaultValue);
       fprintf(file,"n. L2 miss rate:    %.4lf\n",(double)defaultValue);

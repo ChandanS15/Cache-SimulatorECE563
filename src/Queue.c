@@ -375,22 +375,109 @@ bool QueueRemoveUntilIndex(TQueueRecord* queuePtr, uint32_t index)
 
     // Update the tail pointer and count to reflect the removal
     //queuePtr->tail = (queuePtr->tail + index + 1) % queuePtr->size; // Move tail to the new position
-    if(index != 0)
+    /*if(index != 0)
         queuePtr->count = remainingElements; // Update the count to the number of remaining elements
     else
-        queuePtr->count = 1;
-    queuePtr->head = remainingElements;
+        queuePtr->count = queuePtr->size;
+    queuePtr->head = remainingElements;*/
     TprefetchDS itemPeekLast;
     TprefetchDS itemReadLast;
-    if(queuePtr->head != 0)
-        QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, (queuePtr->head -1));
-    else
-        QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, 0);
+   // if(queuePtr->head != 0)
+        //QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, (queuePtr->head -1));
+    //else
+    //peek the last index
+        QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, remainingElements );
     itemPeekLast.tag += 1;
-    QueueRead(queuePtr,(uint8_t*)&itemReadLast);
-    QueueAppend(queuePtr, (uint8_t*)&itemPeekLast);
+    for(uint32_t i = remainingElements; i < queuePtr->size; i++) {
+        QueueAppendByIndex(queuePtr, (uint16_t*)&itemPeekLast,i );
+
+    }
 
     return true; // Indicate successful removal
 }
+
+bool QueueAppendByIndex(TQueueRecord* queuePtr, uint16_t *itemPtr, uint16_t appendIndex)
+{
+    bool returnStatus = false, queueEmpty;
+    uint32_t queueOffset =  0;
+    //Check for NULL pointers
+    if((queuePtr == NULL) || (itemPtr == NULL))
+    {
+        returnStatus = false;
+    }
+    else
+    {
+        //Check if queue is empty
+        queueEmpty = QueueIsEmpty(queuePtr);
+        if(queueEmpty == true)
+        {
+            returnStatus = false;
+        }
+        else
+        {
+            queueOffset = appendIndex;
+            if(appendIndex < queuePtr->count ) {
+
+                //Move the queue entry onto the required memory location
+                memcpy((void*)(&queuePtr->dataPtr[queueOffset]), (void*)itemPtr, queuePtr->itemSize);
+
+                returnStatus = true;
+            }else if(appendIndex == 0 ) {
+                memcpy((void*)(&queuePtr->dataPtr[queueOffset]), (void*)itemPtr, queuePtr->itemSize);
+
+                returnStatus = true;
+
+            }
+            else if(appendIndex > queuePtr->count ) {
+                queuePtr->dataPtr[queueOffset].data = 0;
+                queuePtr->dataPtr[queueOffset].tag = 0;
+                memcpy((void*)(&queuePtr->dataPtr[queueOffset]), (void*)itemPtr, queuePtr->itemSize);
+                returnStatus = true;
+            }
+        }
+    }
+
+    return returnStatus;
+} // End of QueuePeekByIndex()
+
+bool QueueAppendTail(TQueueRecord* queuePtr, uint8_t *itemPtr)
+{
+    bool returnStatus, queueFull;
+
+    // Check for NULL pointers
+    if((queuePtr == NULL) || (itemPtr == NULL))
+    {
+        returnStatus = false;
+    }
+    else
+    {
+        // Check if queue is full
+        queueFull = QueueIsFull(queuePtr);
+        if(queueFull == true)
+        {
+            returnStatus = false;
+        }
+        else
+        {
+            // Append the item onto the queue at the tail position
+            memcpy((void*)&(queuePtr->dataPtr[queuePtr->tail]), (void*)itemPtr, queuePtr->itemSize);
+
+            // Increment the tail index to point to the next insertion position
+            queuePtr->tail++;
+            // Wrap the tail index if it reaches the size of the queue
+            if(queuePtr->tail == queuePtr->size)
+            {
+                queuePtr->tail = 0;
+            }
+
+            // Increment the count of items in the queue
+            queuePtr->count++;
+            returnStatus = true;
+        }
+    }
+
+    return returnStatus;
+} // End of QueueAppend()
+
 
 
