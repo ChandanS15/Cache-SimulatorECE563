@@ -372,21 +372,10 @@ bool QueueRemoveUntilIndex(TQueueRecord* queuePtr, uint32_t index)
         }
     }
 
-
-    // Update the tail pointer and count to reflect the removal
-    //queuePtr->tail = (queuePtr->tail + index + 1) % queuePtr->size; // Move tail to the new position
-    /*if(index != 0)
-        queuePtr->count = remainingElements; // Update the count to the number of remaining elements
-    else
-        queuePtr->count = queuePtr->size;
-    queuePtr->head = remainingElements;*/
     TprefetchDS itemPeekLast;
     TprefetchDS itemReadLast;
-   // if(queuePtr->head != 0)
-        //QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, (queuePtr->head -1));
-    //else
-    //peek the last index
-        QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, remainingElements );
+
+    QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, remainingElements );
     itemPeekLast.tag += 1;
     for(uint32_t i = remainingElements; i < queuePtr->size; i++) {
         QueueAppendByIndex(queuePtr, (uint16_t*)&itemPeekLast,i );

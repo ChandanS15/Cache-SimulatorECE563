@@ -87,8 +87,6 @@ void FillPrefetchBuffer(TLinkedListNode *headPtr, uint32_t index, uint32_t tag) 
             QueueAppend(&cursorPtr->cacheLevelPtr->prefetchQueue[lruPrefetchStreamIndex], (uint8_t*)&prefetchData);
 
             prefetchData.tag++;
-           cursorPtr->cacheLevelPtr->prefetchStatistics.prefetchCount +=1 ;
-            cursorPtr->cacheLevelPtr->totalMemoryTraffic +=1 ;
         }
         UpdatePrefetchLRU(cursorPtr, lruPrefetchStreamIndex);
         if(cursorPtr->cacheLevelPtr->prefetchQueue[lruPrefetchStreamIndex].dataPtr[1].tag == 0) {

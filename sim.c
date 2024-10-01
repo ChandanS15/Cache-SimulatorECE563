@@ -130,10 +130,10 @@ int main (int argc, char *argv[]) {
          count++;
          count--;
       }
-      if(cacheL2->prefetchQueue[0].dataPtr[0].tag == cacheL2->prefetchQueue[0].dataPtr[1].tag) {
-
-         uint32_t hey = 0;
-      }
+      // if(cacheL2->prefetchQueue[0].dataPtr[0].tag == cacheL2->prefetchQueue[0].dataPtr[1].tag) {
+      //
+      //    uint32_t hey = 0;
+      // }
 
       if(count == 99669) {
          count++;
@@ -174,7 +174,7 @@ int main (int argc, char *argv[]) {
          count--;
       }
 
-      if(count == 999995) {
+      if(count == 99995) {
          count++;
          count--;
       }
