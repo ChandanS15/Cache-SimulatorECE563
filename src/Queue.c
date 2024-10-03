@@ -381,7 +381,6 @@ bool QueueRemoveUntilIndex(TQueueRecord* queuePtr, uint32_t index)
         QueueAppendByIndex(queuePtr, (uint16_t*)&itemPeekLast,i );
 
     }
-
     return true; // Indicate successful removal
 }
 

@@ -120,12 +120,40 @@ int main (int argc, char *argv[]) {
    CacheInit(headLL);
 
    //exit(0);
-
+   uint32_t breakPoint = 135;
    uint32_t count = 0;
+   uint32_t refTag = 0;
    // Read requests from the trace file and echo them back.
 
    while (fscanf(fp, "%c %x\n", &rw, &addr) == 2) {	// Stay in the loop if fscanf() successfully parsed two tokens as specified.
       count++;
+
+
+      if(count == 51183) {
+         count++;
+         count--;
+      }
+
+      if(count == 86) {
+         count++;
+         count--;
+      }
+
+      if(count == breakPoint) {
+         count++;
+         count--;
+         breakPoint  += 1;
+      }
+
+      //    refTag = cacheL2->prefetchQueue[0].dataPtr[0].tag;
+      // for(uint8_t i=0; i< cacheL2->numOfStreams; i++) {
+      //
+      //    if(refTag == cacheL2->prefetchQueue[i].dataPtr[0].tag) {
+      //       count++;
+      //       count--;
+      //    }
+      // }
+
       if (rw == 'r') {
             //printf("r %x\n", addr);
             loadStoreStatus = CacheLoadData(headLL,addr,&loadedValue);
@@ -264,12 +292,15 @@ void PrintCacheContents( TLinkedListNode *headPtr) {
 #endif
           uint32_t tagIndex = 0;
           uint32_t countIndex = 0;
+          uint8_t mruArray[cursorPtr->cacheLevelPtr->numOfStreams];
+          FindMRUPrefetch(cursorPtr, mruArray);
+
           uint32_t maxCounterValue = cursorPtr->cacheLevelPtr->prefetchQueue[0].lruIndex;
-          while(tagIndex < cursorPtr->cacheLevelPtr->numOfStreams) {
-             for(prefetchStreamIndex =0; prefetchStreamIndex < cursorPtr->cacheLevelPtr->numOfStreams; prefetchStreamIndex++) {
-                if(cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex].lruIndex == countIndex ) {
+
+          for(uint32_t searchQueueIndex = 0 ; searchQueueIndex < cursorPtr->cacheLevelPtr->numOfStreams; searchQueueIndex++) {
+             uint32_t printInPrefetchQueue = mruArray[searchQueueIndex];
                    for(prefetchBlockIndex = 0; prefetchBlockIndex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; prefetchBlockIndex++) {
-                      bool queuePeekStatus = QueuePeekByIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex],
+                      bool queuePeekStatus = QueuePeekByIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[printInPrefetchQueue],
                                                               (uint16_t *) retrievePrefetchData, prefetchBlockIndex);
                       // Print the contents of the prefetch Buffer
                       if(queuePeekStatus == true) {
@@ -289,12 +320,9 @@ void PrintCacheContents( TLinkedListNode *headPtr) {
 #endif
                 }
 
-             }                tagIndex++;
-             countIndex++;
-          }
+             }cursorPtr = cursorPtr->nextPtr;
+       }
 
-       }cursorPtr = cursorPtr->nextPtr;
-    }
 
    // After printing the contents of the cache print the Measurments.
 #ifdef GENERATE_FILE
