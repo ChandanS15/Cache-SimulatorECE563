@@ -192,13 +192,9 @@ debugCount++;
                         ExtractAddress(cursorPtr->cacheLevelPtr, requestedAddress, &reqTag, &reqIndex, &reqBlockOffset);
 
                         cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
+                        cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
                         cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].tag = reqTag;
                         cursorPtr->cacheLevelPtr->cacheSetDS[index].cacheTagDS[lRUIndex].dirty = false;
-                        if(cursorPtr->nextPtr == NULL && cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchAbsent) {
-                            cursorPtr->cacheLevelPtr->totalMemoryTraffic += 1;
-                            cursorPtr->cacheLevelPtr->cacheStatistics.writeBackCount += 1;
-                        }
-
                         UpdateLRUCounters(cursorPtr, index, lRUIndex);
                         //return true;
                     }
