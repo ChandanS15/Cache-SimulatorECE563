@@ -19,6 +19,7 @@
 #include "Queue.h"
 #include "Cache.h"
 #include "LinkedList.h"
+#define DEBUGDISPLAY
 
 //------------------------------------------------------------------------------------------------------------------
 //Global enums
@@ -46,7 +47,9 @@ typedef enum _cacheRequestType {
     eCachePrefetchRead = 0x03
 }TCacheRequestType;
 
+#define GENERATE_DEBUG_FILE
 
+//#define DEBUG_PRINTDATA
 
 //------------------------------------------------------------------------------------------------------------------
 // Global Function prototypes.
@@ -57,7 +60,11 @@ typedef enum _cacheRequestType {
 // Note          -
 // Return        -
 //------------------------------------------------------------------------------------------------------------------
+#ifdef GENERATE_DEBUG_FILE
+bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t dataToBeStored,FILE *debugFile);
+#elif
 bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t dataToBeStored);
+#endif
 
 //*************************************************************************************************************** */
 //------------------------------------------------------------------------------------------------------------------
@@ -65,9 +72,11 @@ bool CacheStoreData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t data
 // Note          -
 // Return        -
 //------------------------------------------------------------------------------------------------------------------
-
+#ifdef GENERATE_DEBUG_FILE
+bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *loadedData, FILE *debugFile) ;
+#elif
 bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *loadedData) ;
-
+#endif
 TCacheSearchStatus SearchTag(TLinkedListNode *headPtr, uint32_t memAddress, uint16_t *tagFoundIndex,
                             TPrefetchSearchStatus *tagFoundInPrefetchStatus, uint16_t *tagFoundInPrefetchIndex, uint16_t *tagFoundInPrefetchStream)  ;
 

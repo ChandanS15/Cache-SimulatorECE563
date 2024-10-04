@@ -349,38 +349,53 @@ bool QueueRemoveUntilIndex(TQueueRecord* queuePtr, uint32_t index)
     }
 
     // Copy the last element to be removed to the itemPtr (element at index)
-    uint32_t removeOffset = ((queuePtr->tail + index) % queuePtr->size) * queuePtr->itemSize;
-    memcpy((void*)itemPtr, (void*)((queuePtr->dataPtr) + removeOffset), queuePtr->itemSize);
+    //uint32_t removeOffset = ((queuePtr->tail + index) % queuePtr->size) * queuePtr->itemSize;
+    memcpy((void*)itemPtr, (void*)&(queuePtr->dataPtr[index]), queuePtr->itemSize);
 
+    //QueueAppendByIndex(queuePtr, itemPtr,0);
 
-    // Calculate how many elements remain after the removed elements
-    uint32_t remainingElements = queuePtr->count - (index + 1);
-
-    // If there are elements to shift, proceed with shifting
-    if (remainingElements > 0)
-    {
-        // Shift remaining elements from the current tail + index + 1 to the new position
-        for (uint32_t i = 0; i < remainingElements; i++)
-        {
-            uint32_t currentIndex = (queuePtr->tail + index + 1 + i) % queuePtr->size;
-            uint32_t newIndex = (queuePtr->tail + i) % queuePtr->size;
-
-            // Shift each element to the new position
-            memcpy((void*)&(queuePtr->dataPtr[newIndex]),
-                   (void*)&(queuePtr->dataPtr[currentIndex]),
-                   queuePtr->itemSize);
-        }
+    for(int i = 0; i < queuePtr->count; i++) {
+        itemPtr->tag +=1;
+        QueueAppendByIndex(queuePtr,itemPtr, i);
     }
 
-    TprefetchDS itemPeekLast;
-    TprefetchDS itemReadLast;
 
-    QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, remainingElements );
-    itemPeekLast.tag += 1;
-    for(uint32_t i = remainingElements; i < queuePtr->size; i++) {
-        QueueAppendByIndex(queuePtr, (uint16_t*)&itemPeekLast,i );
-
-    }
+    // // Calculate how many elements remain after the removed elements
+    //
+    // uint32_t remainingElements = queuePtr->count - (index + 1);
+    // if(remainingElements == 0)
+    //     remainingElements = 1;
+    //
+    // uint32_t elementsToShift = queuePtr->count - remainingElements;
+    // uint32_t newIndex = 0;
+    // uint32_t currentIndex = 0;
+    // // If there are elements to shift, proceed with shifting
+    // if (remainingElements >= 0)
+    // {
+    //     // Shift remaining elements from the current tail + index + 1 to the new position
+    //     for (uint32_t i = 0; i < elementsToShift; i++)
+    //     {
+    //         currentIndex = (queuePtr->tail + index + 1 + i) % queuePtr->size;
+    //         newIndex = (queuePtr->tail + i) % queuePtr->size;
+    //
+    //         // Shift each element to the new position
+    //         memcpy((void*)&(queuePtr->dataPtr[newIndex]),
+    //                (void*)&(queuePtr->dataPtr[currentIndex]),
+    //                queuePtr->itemSize);
+    //     }
+    // }
+    //
+    // TprefetchDS itemPeekLast;
+    // TprefetchDS itemReadLast;
+    // uint32_t i = 0;
+    // QueuePeekByIndex(queuePtr, (uint16_t*)&itemPeekLast, newIndex );
+    //
+    // for( i = remainingElements; i < queuePtr->size; i++) {
+    //     itemPeekLast.tag += 1;
+    //     QueueAppendByIndex(queuePtr, (uint16_t*)&itemPeekLast,i );
+    //
+    //
+    // }
     return true; // Indicate successful removal
 }
 

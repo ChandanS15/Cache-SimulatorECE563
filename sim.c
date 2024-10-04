@@ -17,8 +17,12 @@ TCacheDS *cacheL1, *cacheL2;
 uint32_t loadedValue;
 
 bool loadStoreStatus = false;
-
 void PrefetchTest(TLinkedListNode * node);
+
+
+
+
+
 
 int main (int argc, char *argv[]) {
    FILE *fp;			                     // File pointer.
@@ -124,17 +128,36 @@ int main (int argc, char *argv[]) {
    uint32_t count = 0;
    uint32_t refTag = 0;
    // Read requests from the trace file and echo them back.
+#ifdef GENERATE_DEBUG_FILE
+   const char *debugfileName="debugCacheContents.txt";
+   FILE *debugFile = fopen( debugfileName, "w" );
+   if( (FILE*) debugFile == NULL) {
+      printf("Failed to open file %s\n", debugfileName);
+      return;
+   }
+
+#endif
 
    while (fscanf(fp, "%c %x\n", &rw, &addr) == 2) {	// Stay in the loop if fscanf() successfully parsed two tokens as specified.
       count++;
 
 
-      if(count == 51183) {
+      if(count == 7325) {
          count++;
          count--;
       }
 
-      if(count == 86) {
+      if(count == 99391) {
+         count++;
+         count--;
+      }
+
+      if(count == 99452) {
+         count++;
+         count--;
+      }
+
+      if(count == 99995) {
          count++;
          count--;
       }
@@ -155,8 +178,11 @@ int main (int argc, char *argv[]) {
       // }
 
       if (rw == 'r') {
-            //printf("r %x\n", addr);
+#ifdef GENERATE_DEBUG_FILE
+         loadStoreStatus = CacheLoadData(headLL,addr,&loadedValue,debugFile);
+#elif
             loadStoreStatus = CacheLoadData(headLL,addr,&loadedValue);
+#endif
 #ifdef DEBUG_LOWPRIORITY_AVAILABLE
              if(loadStoreStatus) {
                 printf("The LoadedValue from the address %x is : %d\n", addr, loadedValue);
@@ -171,7 +197,11 @@ int main (int argc, char *argv[]) {
          }
          else if (rw == 'w') {
             //printf("w %x\n", addr);
+#ifdef GENERATE_DEBUG_FILE
+            loadStoreStatus = CacheStoreData(headLL,addr,0, debugFile);
+#elif
             loadStoreStatus = CacheStoreData(headLL,addr,0);
+#endif
 #ifdef DEBUG_LOWPRIORITY_AVAILABLE
              if(loadStoreStatus) {
                 printf("The Stored Value to the address %x. \n", addr);

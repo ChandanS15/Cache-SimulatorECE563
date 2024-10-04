@@ -75,7 +75,8 @@ void FillPrefetchBuffer(TLinkedListNode *headPtr, uint32_t index, uint32_t tag) 
 
 
 
-    uint32_t tagToInsert = (tag << cursorPtr->cacheLevelPtr->numOfIndexBits) | (index + 1);
+    uint32_t tagToInsert = ( tag << cursorPtr->cacheLevelPtr->numOfIndexBits) | (index);
+    tagToInsert += 1;
 
     prefetchData.tag = tagToInsert;
     prefetchData.data = 0;
@@ -133,7 +134,7 @@ uint32_t FindLRUPrefetch(TLinkedListNode *headPtr) {
 
         if(cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex].lruIndex > maxlruIndexValue) {
             lruIndex = prefetchStreamIndex;
-            maxlruIndexValue = cursorPtr->cacheLevelPtr->prefetchQueue[0].lruIndex;
+            maxlruIndexValue = cursorPtr->cacheLevelPtr->prefetchQueue[prefetchStreamIndex].lruIndex;
         }
     }
     return lruIndex;
