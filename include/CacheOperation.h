@@ -19,7 +19,9 @@
 #include "Queue.h"
 #include "Cache.h"
 #include "LinkedList.h"
-#define DEBUGDISPLAY
+#define DEBUGDISPLAYL1
+
+#define DEBUGDISPLAYL2
 
 //------------------------------------------------------------------------------------------------------------------
 //Global enums
@@ -79,12 +81,17 @@ bool CacheLoadData(TLinkedListNode *headPtr, uint32_t memAddress, uint32_t *load
 #endif
 TCacheSearchStatus SearchTag(TLinkedListNode *headPtr, uint32_t memAddress, uint16_t *tagFoundIndex,
                             TPrefetchSearchStatus *tagFoundInPrefetchStatus, uint16_t *tagFoundInPrefetchIndex, uint16_t *tagFoundInPrefetchStream)  ;
-
-uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress);//, TCacheRequestType cacheOperation);
-
+#ifdef GENERATE_DEBUG_FILE
+uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress, FILE *debugFile);//, TCacheRequestType cacheOperation);
+#elif
+uint32_t CacheBlockRequest(TLinkedListNode *headPtr, uint32_t memAddress);
+#endif
 uint32_t FindLRUBlockIndex(TLinkedListNode *headPtr, uint32_t index) ;
-
+#ifdef GENERATE_DEBUG_FILE
+void WriteBack(TLinkedListNode *headPtr, uint32_t memAddress, FILE *debugFile);
+#elif
 void WriteBack(TLinkedListNode *headPtr, uint32_t memAddress);
+#endif
 bool IsCacheSetFull(TLinkedListNode *headPtr, uint32_t index, uint32_t *tagEmptyIndex);
 
 
