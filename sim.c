@@ -275,14 +275,10 @@ void PrintCacheContents( TLinkedListNode *headPtr) {
        fprintf(file, "\n");
 #endif
 
-
+uint32_t printSet = 0;
+       uint32_t printNextLine = 0;
        for(indexValue =0; indexValue < cursorPtr->cacheLevelPtr->numOfSets; indexValue++) {
-#ifdef DEBUG_AVAILABLE
-          printf("set    %d:",indexValue);
-#endif
-#ifdef GENERATE_FILE
-          fprintf(file,"set    %d:",indexValue);
-#endif
+
 
           uint32_t tagIndex = 0;
           uint32_t countIndex = 0;
@@ -290,24 +286,40 @@ void PrintCacheContents( TLinkedListNode *headPtr) {
           while(tagIndex < cursorPtr->cacheLevelPtr->assoc) {
              for(tagValue =0; tagValue < cursorPtr->cacheLevelPtr->assoc; tagValue++) {
                 if(cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].counter == countIndex  ) {
+                   if(cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].valid == true){
+                      printSet = 1;
+                      printNextLine = 1;
+                      if(printSet == 1) {
 #ifdef DEBUG_AVAILABLE
-                   printf("     %x %s", cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].tag, (cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].dirty == true) ? "D" : " " );
+                         printf("set    %d:",indexValue);
 #endif
 #ifdef GENERATE_FILE
-                   fprintf(file,"    %x %s ", cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].tag, (cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].dirty == true) ? "D" : " ");
+                         fprintf(file,"set    %d:",indexValue);
 #endif
+#ifdef DEBUG_AVAILABLE
+                      }
+                      printSet = 0;
+                      printf("     %x %s", cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].tag, (cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].dirty == true) ? "D" : " " );
+#endif
+#ifdef GENERATE_FILE
+                      fprintf(file,"    %x %s ", cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].tag, (cursorPtr->cacheLevelPtr->cacheSetDS[indexValue].cacheTagDS[tagValue].dirty == true) ? "D" : " ");
+#endif
+                   }
                 }
              }
              countIndex++;
              tagIndex ++;
           }
 
+          if(printNextLine == 1) {
 #ifdef DEBUG_AVAILABLE
-          printf("\n");
+             printf("\n");
 #endif
 #ifdef GENERATE_FILE
-          fprintf(file,"\n");
+             fprintf(file,"\n");
 #endif
+          }
+          printNextLine = 0;
        }
 
        // Print prefetch Stream buffers content if available
