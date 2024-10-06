@@ -345,20 +345,20 @@ uint32_t printSet = 0;
              uint32_t printInPrefetchQueue = mruArray[searchQueueIndex];
              if(cursorPtr->cacheLevelPtr->prefetchQueue[searchQueueIndex].validBit == true){
                 printStreamBuffer = 1; printNextLine = 1;
-                   for(prefetchBlockIndex = 0; prefetchBlockIndex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; prefetchBlockIndex++) {
-                      bool queuePeekStatus = QueuePeekByIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[printInPrefetchQueue],
-                                                              (uint16_t *) retrievePrefetchData, prefetchBlockIndex);
-                      // Print the contents of the prefetch Buffer
-                      if(queuePeekStatus == true && printStreamBuffer == 1) {
+                for(prefetchBlockIndex = 0; prefetchBlockIndex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; prefetchBlockIndex++) {
+                   bool queuePeekStatus = QueuePeekByIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[printInPrefetchQueue],
+                                                           (uint16_t *) retrievePrefetchData, prefetchBlockIndex);
+                   // Print the contents of the prefetch Buffer
+                   if(queuePeekStatus == true && printStreamBuffer == 1) {
 #ifdef DEBUG_AVAILABLE
-                         printf("%x  ", retrievePrefetchData->tag);
+                      printf("%x  ", retrievePrefetchData->tag);
 #endif
 #ifdef GENERATE_FILE
-                         fprintf(file,"%x  ", retrievePrefetchData->tag);
+                      fprintf(file,"%x  ", retrievePrefetchData->tag);
 #endif
-                      }
-                      printStreamBuffer = 0;
                    }
+                   printStreamBuffer = 0;
+                }
                 if(printNextLine == 1) {
 #ifdef DEBUG_AVAILABLE
                    printf("\n");
@@ -367,7 +367,8 @@ uint32_t printSet = 0;
                    fprintf(file,"\n");
 #endif
                 }
-                }
+             }
+          }
 
              }cursorPtr = cursorPtr->nextPtr;
        }
