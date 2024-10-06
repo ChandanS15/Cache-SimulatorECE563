@@ -324,6 +324,8 @@ uint32_t printSet = 0;
 
        // Print prefetch Stream buffers content if available
        if(cursorPtr->cacheLevelPtr->prefetchAvailable == ePrefetchPresent) {
+          uint32_t printStreamBuffer = 0;
+          uint32_t printNextLine = 0;
 #ifdef DEBUG_AVAILABLE
           printf("\n");
           printf("===== Stream Buffer (s) contents =====\n");
@@ -341,11 +343,13 @@ uint32_t printSet = 0;
 
           for(uint32_t searchQueueIndex = 0 ; searchQueueIndex < cursorPtr->cacheLevelPtr->numOfStreams; searchQueueIndex++) {
              uint32_t printInPrefetchQueue = mruArray[searchQueueIndex];
+             if(cursorPtr->cacheLevelPtr->prefetchQueue[searchQueueIndex].validBit == true){
+                printStreamBuffer = 1; printNextLine = 1;
                    for(prefetchBlockIndex = 0; prefetchBlockIndex < cursorPtr->cacheLevelPtr->numOfBlocksPerStream; prefetchBlockIndex++) {
                       bool queuePeekStatus = QueuePeekByIndex(&cursorPtr->cacheLevelPtr->prefetchQueue[printInPrefetchQueue],
                                                               (uint16_t *) retrievePrefetchData, prefetchBlockIndex);
                       // Print the contents of the prefetch Buffer
-                      if(queuePeekStatus == true) {
+                      if(queuePeekStatus == true && printStreamBuffer == 1) {
 #ifdef DEBUG_AVAILABLE
                          printf("%x  ", retrievePrefetchData->tag);
 #endif
@@ -353,13 +357,16 @@ uint32_t printSet = 0;
                          fprintf(file,"%x  ", retrievePrefetchData->tag);
 #endif
                       }
+                      printStreamBuffer = 0;
                    }
+                if(printNextLine == 1) {
 #ifdef DEBUG_AVAILABLE
                    printf("\n");
 #endif
 #ifdef GENERATE_FILE
                    fprintf(file,"\n");
 #endif
+                }
                 }
 
              }cursorPtr = cursorPtr->nextPtr;
